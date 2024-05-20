@@ -2,12 +2,15 @@ package Controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -30,6 +33,8 @@ public class UploadGame extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	static String SAVE_DIR = "img";
 	static ProductModel GameModels = new ProductModelDM();
+	private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
+    private static final List<String> ALLOWED_MIME_TYPES = Arrays.asList("image/jpeg", "image/png", "image/gif");
 	
 	DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	LocalDateTime now = LocalDateTime.now();
@@ -68,19 +73,18 @@ public class UploadGame extends HttpServlet {
 		String fileName= null;
 		String message = "upload =\n";
 		if (request.getParts() != null && request.getParts().size() > 0) {
-			for (Part part : request.getParts()) {
-				fileName = extractFileName(part);
-			
-				if (fileName != null && !fileName.equals("")) {
-					part.write(savePath + File.separator + fileName);
-					g1.setImg(fileName);
-					
-					message = message + fileName + "\n";
-				} else {
-					request.setAttribute("error", "Errore: Bisogna selezionare almeno un file");
-				}
-			}
-		}
+            for (Part part : request.getParts()) {
+                fileName = extractFileName(part);
+                if (fileName != null && !fileName.equals("") && isValidFile(part)) {
+                    String filePath = savePath + File.separator + fileName;
+                    part.write(filePath);
+                    g1.setImg(fileName);
+                    message = message + fileName + "\n";
+                } else {
+                    request.setAttribute("error", "Errore: File non valido o nessun file selezionato.");
+                }
+            }
+        }
 		
 		g1.setName(request.getParameter("nomeGame"));
 		g1.setYears(request.getParameter("years"));
@@ -117,5 +121,41 @@ public class UploadGame extends HttpServlet {
 		return "";
 	}
 	
+	private boolean isValidFile(Part part) throws IOException {
+        byte[] buffer = new byte[8];
+        try (InputStream input = part.getInputStream()) {
+            if (input.read(buffer) != buffer.length) {
+                return false;
+            }
+        }
 
+        // JPEG magic number: FF D8 FF
+        if (buffer[0] == (byte) 0xFF && buffer[1] == (byte) 0xD8 && buffer[2] == (byte) 0xFF) {
+            return true;
+        }
+
+        // PNG magic number: 89 50 4E 47 0D 0A 1A 0A
+        if (buffer[0] == (byte) 0x89 && buffer[1] == (byte) 0x50 && buffer[2] == (byte) 0x4E &&
+            buffer[3] == (byte) 0x47 && buffer[4] == (byte) 0x0D && buffer[5] == (byte) 0x0A &&
+            buffer[6] == (byte) 0x1A && buffer[7] == (byte) 0x0A) {
+            return true;
+        }
+
+        // GIF magic number: GIF87a or GIF89a
+        if ((buffer[0] == 'G' && buffer[1] == 'I' && buffer[2] == 'F' &&
+             buffer[3] == '8' && buffer[4] == '7' && buffer[5] == 'a') ||
+            (buffer[0] == 'G' && buffer[1] == 'I' && buffer[2] == 'F' &&
+             buffer[3] == '8' && buffer[4] == '9' && buffer[5] == 'a')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private String getFileExtension(String fileName) {
+        if (fileName == null || fileName.lastIndexOf(".") == -1) {
+            return "";
+        }
+        return fileName.substring(fileName.lastIndexOf(".") + 1);
+    }
 }

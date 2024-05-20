@@ -35,7 +35,7 @@ else{
 	<fieldset>
 		<legend>Dati Gioco</legend>
 			<input type="text" name="nomeGame" placeholder="nome" class="formInput" required autofocus > <br>
-			<label for="date">data uscita gioco </label>
+			<label for="date">Data uscita gioco </label>
 			<input type="date" name="years" class="formInput" required> <br>
 			<label for="myfile">Select a foto for game</label>
 			<input type="file" id="myfile" name="myfile" class="formInput" required accept="image/*"> <br>
